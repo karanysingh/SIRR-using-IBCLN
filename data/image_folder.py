@@ -42,19 +42,11 @@ def read_dng(image):
     img = raw.postprocess(**default_kwargs)
   return img
 
-<<<<<<< HEAD
 def default_loader(path):
     if(path[-3:] in ['dng','DNG','RAW']):
         return read_dng(path) 
     else:
         return Image.open(path).convert('RGB')
-=======
-def default_loader(path,extension):
-    # if(extension == "raw"):
-    return read_dng(path) 
-    # else:
-    #     return Image.open(path).convert('RGB')
->>>>>>> parent of ec3cd25 (.)
 
 
 class ImageFolder(data.Dataset):
