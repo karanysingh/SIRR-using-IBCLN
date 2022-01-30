@@ -6,17 +6,19 @@ The class name should be consistent with both the filename and its dataset_mode 
 The filename should be <dataset_mode>_dataset.py
 The class name should be <Dataset_mode>Dataset.py
 You need to implement the following functions:
-    -- <modify_commandline_options>:　Add dataset-specific options and rewrite default values for existing options.
+    -- <modify_commandline_options>: Add dataset-specific options and rewrite default values for existing options.
     -- <__init__>: Initialize this dataset class.
     -- <__getitem__>: Return a data point and its metadata information.
     -- <__len__>: Return the number of images.
 """
+from email.policy import default
 import os.path
 from data.base_dataset import BaseDataset, get_transform
-from data.image_folder import make_dataset
+from data.image_folder import default_loader, make_dataset
 from PIL import Image
 import random
 import torchvision.transforms as transforms
+import rawpy as rp
 
 import numpy as np
 
@@ -58,6 +60,16 @@ class RandomCrop(object):
 class ResizeNatural3Dataset(BaseDataset):
     """A reflection dataset class to load data from A1, A2, B datasets, where A1(indoor) and A2(outdoor) are image sets
      without reflection, and B is a image set with reflection."""
+     
+    
+    def default_loader(path):
+        if(path[-3:] in ['dng','DNG','RAW']):
+            with rp.imread(path) as raw:
+                default_kwargs = dict(gamma=(1,1), no_auto_bright=True, output_bps=16)
+                img = raw.postprocess(**default_kwargs)
+            return img
+        else:
+            return Image.open(path).convert('RGB')
 
     def __init__(self, opt):
         """Initialize this dataset class.
@@ -94,7 +106,7 @@ class ResizeNatural3Dataset(BaseDataset):
         output_nc = self.opt.output_nc  # get the number of channels of output image
         self.transform_A = get_transform(self.opt, grayscale=(input_nc == 1))
         self.transform_B = get_transform(self.opt, grayscale=(output_nc == 1))
-        print(self.transform_A)
+        # print(self.transform_A)
 
         self.trans2 = transforms.Compose([transforms.Resize([128, 128]), transforms.ToTensor()])
         self.trans4 = transforms.Compose([transforms.Resize([64, 64]), transforms.ToTensor()])
@@ -116,9 +128,11 @@ class ResizeNatural3Dataset(BaseDataset):
                 A1_path = self.natural_A1_paths[natural_index]  # make sure index is within then range
                 B_path = self.natural_B_paths[natural_index]
 
-                A1_img = np.asarray(Image.open(A1_path).convert('RGB'))
+                A1_img = np.asarray(default_loader(A1_path))
+                # A1_img = np.asarray(Image.open(A1_path).convert('RGB'))
                 A2_img = Image.fromarray(np.zeros_like(A1_img))
-                B_img = np.asarray(Image.open(B_path).convert('RGB'))
+                B_img = np.asarray(default_loader(B_path))
+                # B_img = np.asarray(Image.open(B_path).convert('RGB'))
                 imgs = self.crop({'I': B_img, 'T': A1_img})
                 A1_img, B_img = Image.fromarray(imgs['T']), Image.fromarray(imgs['I'])
                 is_natural_int = 1
@@ -128,16 +142,20 @@ class ResizeNatural3Dataset(BaseDataset):
                 A2_path = self.A2_paths[index_A2]
                 B_path = ''
 
-                A1_img = Image.open(A1_path).convert('RGB')
-                A2_img = Image.open(A2_path).convert('RGB')
+                # A1_img = Image.open(A1_path).convert('RGB')
+                # A2_img = Image.open(A2_path).convert('RGB')
+                A1_img = default_loader(A1_path)
+                A2_img = default_loader(A2_path)
                 B_img = Image.fromarray(np.zeros_like(A1_img))
                 is_natural_int = 0
         else:  # test
             B_path = self.B_paths[index]
-            B_img = Image.open(B_path).convert('RGB')
+            # B_img = Image.open(B_path).convert('RGB')
+            B_img = default_loader(B_path)
             if index < len(self.A1_paths):
                 A1_path = self.A1_paths[index]
-                A1_img = Image.open(A1_path).convert('RGB')
+                # A1_img = Image.open(A1_path).convert('RGB')
+                A1_img = default_loader(A1_path)
             else:
                 A1_img = Image.fromarray(np.zeros_like(B_img))
             A2_img = None

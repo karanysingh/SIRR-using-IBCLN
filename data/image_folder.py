@@ -9,14 +9,17 @@ import torch.utils.data as data
 from PIL import Image
 import os
 import os.path
+import rawpy as rp
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
-    '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP',
+    '.png', '.PNG', '.ppm', '.PPM',
+    '.bmp', '.BMP','.dng','.DNG',
 ]
 
 
 def is_image_file(filename):
+    # print('called',any(filename.endswith(extension) for extension in IMG_EXTENSIONS))
     return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
 
 
@@ -29,11 +32,29 @@ def make_dataset(dir, max_dataset_size=float("inf")):
             if is_image_file(fname):
                 path = os.path.join(root, fname)
                 images.append(path)
+                # print("images",images)
     return images[:min(max_dataset_size, len(images))]
 
 
+def read_dng(image):
+  with rp.imread(image) as raw:
+    default_kwargs = dict(gamma=(1,1), no_auto_bright=True, output_bps=16)
+    img = raw.postprocess(**default_kwargs)
+  return img
+
+<<<<<<< HEAD
 def default_loader(path):
-    return Image.open(path).convert('RGB')
+    if(path[-3:] in ['dng','DNG','RAW']):
+        return read_dng(path) 
+    else:
+        return Image.open(path).convert('RGB')
+=======
+def default_loader(path,extension):
+    # if(extension == "raw"):
+    return read_dng(path) 
+    # else:
+    #     return Image.open(path).convert('RGB')
+>>>>>>> parent of ec3cd25 (.)
 
 
 class ImageFolder(data.Dataset):
